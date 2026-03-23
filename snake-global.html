@@ -327,16 +327,16 @@ function getDeviceInfo(){
 
 async function getLocation(){
   try {
-    const r = await fetch('https://ipinfo.io/json?token=aadd8b4371f846');
+    const r = await fetch('https://ipinfo.io/json');
     const d = await r.json();
-    if(d.city) return `${d.city}, ${d.region}, ${d.country}`;
+    if(d.city) return d.city+', '+d.country;
     if(d.country) return d.country;
   } catch(e) {}
   try {
     const r = await fetch('https://cloudflare.com/cdn-cgi/trace');
-    const text = await r.text();
-    const loc = text.match(/loc=([A-Z]+)/);
-    if(loc) return loc[1];
+    const t = await r.text();
+    const m = t.match(/loc=([A-Z]+)/);
+    if(m) return m[1];
   } catch(e) {}
   return 'Unknown';
 }
