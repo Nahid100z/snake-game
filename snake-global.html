@@ -411,24 +411,43 @@ async function loadFirebaseScores(){
   const list=document.getElementById('scoreList');
   list.innerHTML='<div class="loading-msg">⏳ লোড হচ্ছে...</div>';
   try {
-    const snap = await db.ref('scores').orderByChild('pts').limitToLast(50).once('value');
-    const scores=[];
-    snap.forEach(c=>scores.push({key:c.key,...c.val()}));
+    // Use Firebase REST API directly - works from any domain
+    const url = 'https://snakegame-32396-default-rtdb.firebaseio.com/scores.json?orderBy=%22pts%22&limitToLast=50';
+    const r = await fetch(url);
+    const data = await r.json();
+    if(!data){ list.innerHTML='<div class="empty-msg">NO SCORES YET<br>Be the first!</div>'; return; }
+    const scores = Object.entries(data).map(([k,v])=>({key:k,...v}));
     scores.sort((a,b)=>b.pts-a.pts);
     const medals=['★','✦','◆','•','·'];
-    if(scores.length===0){
-      list.innerHTML='<div class="empty-msg">NO SCORES YET<br>Be the first!</div>';
-    } else {
-      list.innerHTML=scores.map((e,i)=>`
-        <div class="score-item ${i===0?'gold':''}">
-          <div class="col-rank">${medals[i]||('#'+(i+1))}</div>
-          <div class="col-name">${e.name}</div>
-          <div class="col-pts">${e.pts}</div>
-          <div class="col-loc">${e.location||''} ${e.browser||''} ${e.device||''}</div>
-        </div>`).join('');
-    }
+    list.innerHTML=scores.map((e,i)=>`
+      <div class="score-item ${i===0?'gold':''}">
+        <div class="col-rank">${medals[i]||('#'+(i+1))}</div>
+        <div class="col-name">${e.name||'?'}</div>
+        <div class="col-pts">${e.pts||0}</div>
+        <div class="col-loc">${e.location||''} ${e.browser||''} ${e.device||''}</div>
+      </div>`).join('');
   } catch(e){
-    list.innerHTML='<div class="loading-msg">❌ লোড হয়নি</div>';
+    // Fallback to Firebase SDK
+    try {
+      const snap = await db.ref('scores').orderByChild('pts').limitToLast(50).once('value');
+      const scores=[];
+      snap.forEach(c=>scores.push({key:c.key,...c.val()}));
+      scores.sort((a,b)=>b.pts-a.pts);
+      const medals=['★','✦','◆','•','·'];
+      if(scores.length===0){
+        list.innerHTML='<div class="empty-msg">NO SCORES YET<br>Be the first!</div>';
+      } else {
+        list.innerHTML=scores.map((e,i)=>`
+          <div class="score-item ${i===0?'gold':''}">
+            <div class="col-rank">${medals[i]||('#'+(i+1))}</div>
+            <div class="col-name">${e.name||'?'}</div>
+            <div class="col-pts">${e.pts||0}</div>
+            <div class="col-loc">${e.location||''} ${e.browser||''} ${e.device||''}</div>
+          </div>`).join('');
+      }
+    } catch(err){
+      list.innerHTML='<div class="loading-msg">❌ লোড হয়নি: '+err.message+'</div>';
+    }
   }
 }
 
